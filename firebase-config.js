@@ -1,8 +1,10 @@
-// Firebase Console > 프로젝트 설정 > 내 앱 > 웹 앱의 "firebaseConfig"를 여기에 붙여넣으세요.
-// 이 값 자체는 비밀번호가 아닙니다. 실제 대화 보호는 firestore.rules가 담당합니다.
+
 export const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  appId: "PASTE_YOUR_APP_ID",
+  apiKey: "AIzaSyB3qy5paT4_hpzGAXONqBFmvUZXlvY4eQQ",
+  authDomain: "racuez.firebaseapp.com",
+  projectId: "racuez",
+  storageBucket: "racuez.firebasestorage.app",
+  messagingSenderId: "1032927098805",
+  appId: "1:1032927098805:web:b1d738c0d1b71a0d59cbfc"
 };
+  
