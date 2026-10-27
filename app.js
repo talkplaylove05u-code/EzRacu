@@ -15,6 +15,7 @@ const dom = {
   notificationToggle: $('notificationToggle'), popupButton: $('popupButton'),
   olderButton: $('olderMessagesButton'), historyStatus: $('historyStatus'),
   unreadBadge: $('unreadBadge'), newMessagesButton: $('newMessagesButton'),
+  themeDialog: $('themeDialog'),
 };
 const isConfigured = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('PASTE_') &&
   firebaseConfig.projectId && firebaseConfig.projectId !== 'YOUR_PROJECT_ID' &&
@@ -31,8 +32,9 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif
 const imageViewer = createImageViewer(downloadAttachment, dom.input, () => unreadIndicator.sync());
 const unreadIndicator = createUnreadIndicator({
   messages: dom.messages, badge: dom.unreadBadge, button: dom.newMessagesButton,
-  canRead: () => Boolean(currentUser) && !imageViewer.isOpen, focusInput: dom.input,
+  canRead: () => Boolean(currentUser) && !imageViewer.isOpen && !dom.themeDialog.open, focusInput: dom.input,
 });
+dom.themeDialog.addEventListener('close', () => unreadIndicator.sync());
 const MESSAGE_PAGE_SIZE = 100;
 const messageHistory = new Map();
 const messageRows = new Map();
@@ -200,7 +202,7 @@ function imageGallery() {
   return orderedMessages().filter((doc) => isImageAttachment(doc.data()))
     .map((doc) => ({id: doc.id, data: doc.data()}));
 }
-function renderMessages({preservePosition = false} = {}) {
+function renderMessages({preservePosition = false, animateIds = new Set()} = {}) {
   const nearBottom = dom.messages.scrollHeight - dom.messages.scrollTop - dom.messages.clientHeight < 90;
   const previousHeight = dom.messages.scrollHeight;
   const previousTop = dom.messages.scrollTop;
@@ -238,6 +240,10 @@ function renderMessages({preservePosition = false} = {}) {
     const row = document.createElement('div');
     row.dataset.messageId = item.id;
     row.className = `message-line${mine ? ' mine' : ''}`;
+    if (animateIds.has(item.id)) {
+      row.classList.add('message-new');
+      setTimeout(() => row.classList.remove('message-new'), 350);
+    }
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     const isAttachment = data.kind === 'attachment' &&
@@ -360,6 +366,8 @@ function subscribeToChat() {
   // 최초 로딩에 포함된 이전 메시지는 새 메시지 알림을 내지 않습니다.
   let initialServerSnapshotReceived = false;
   unsubscribeMessages = onSnapshot(recent, { includeMetadataChanges: true }, (snapshot) => {
+    const freshIds = new Set(initialServerSnapshotReceived ? snapshot.docs
+      .filter((doc) => !messageHistory.has(doc.id)).map((doc) => doc.id) : []);
     const added = initialServerSnapshotReceived ? snapshot.docChanges()
       .filter((change) => change.type === 'added' && !change.doc.metadata.hasPendingWrites)
       .map((change) => change.doc)
@@ -371,7 +379,7 @@ function subscribeToChat() {
       historyReady = true;
     }
     status(`채팅방 연결됨 · 불러온 메시지 ${messageHistory.size}개`);
-    renderMessages();
+    renderMessages({animateIds: freshIds});
     updateHistoryControls();
     if (added.length) {
       unreadIndicator.receive(added.map((doc) => doc.id));
