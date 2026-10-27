@@ -2,7 +2,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.11.0/fireba
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocsFromServer, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
-import { createImageViewer } from './image-viewer.js';
+import { createImageViewer } from './image-viewer.js?v=5';
+import { createUnreadIndicator, messageDay, dayLabel } from './chat-indicators.js?v=5';
 
 const $ = (id) => document.getElementById(id);
 const dom = {
@@ -13,6 +14,7 @@ const dom = {
   attachmentThumbnail: $('attachmentThumbnail'), attachmentDescription: $('attachmentDescription'), attachmentRemove: $('attachmentRemove'),
   notificationToggle: $('notificationToggle'), popupButton: $('popupButton'),
   olderButton: $('olderMessagesButton'), historyStatus: $('historyStatus'),
+  unreadBadge: $('unreadBadge'), newMessagesButton: $('newMessagesButton'),
 };
 const isConfigured = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('PASTE_') &&
   firebaseConfig.projectId && firebaseConfig.projectId !== 'YOUR_PROJECT_ID' &&
@@ -26,7 +28,11 @@ let preparing = false;
 let pendingAttachment = null;
 const MAX_FILE_BYTES = 400 * 1024; // Firestore 무료 플랜용: 단일 문서에 인코딩해 저장
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
-const imageViewer = createImageViewer(downloadAttachment, dom.input);
+const imageViewer = createImageViewer(downloadAttachment, dom.input, () => unreadIndicator.sync());
+const unreadIndicator = createUnreadIndicator({
+  messages: dom.messages, badge: dom.unreadBadge, button: dom.newMessagesButton,
+  canRead: () => Boolean(currentUser) && !imageViewer.isOpen, focusInput: dom.input,
+});
 const MESSAGE_PAGE_SIZE = 100;
 const messageHistory = new Map();
 const messageRows = new Map();
@@ -183,15 +189,22 @@ function formatFileSize(bytes) {
   if (!Number.isFinite(bytes)) return '';
   return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`;
 }
-function renderMessages({preservePosition = false} = {}) {
-  const nearBottom = dom.messages.scrollHeight - dom.messages.scrollTop - dom.messages.clientHeight < 90;
-  const previousHeight = dom.messages.scrollHeight;
-  const previousTop = dom.messages.scrollTop;
-  const items = [...messageHistory.values()].sort((a, b) => {
+function orderedMessages() {
+  return [...messageHistory.values()].sort((a, b) => {
     const timeA = a.data().createdAt?.toMillis() ?? Number.MAX_SAFE_INTEGER;
     const timeB = b.data().createdAt?.toMillis() ?? Number.MAX_SAFE_INTEGER;
     return timeA - timeB || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   });
+}
+function imageGallery() {
+  return orderedMessages().filter((doc) => isImageAttachment(doc.data()))
+    .map((doc) => ({id: doc.id, data: doc.data()}));
+}
+function renderMessages({preservePosition = false} = {}) {
+  const nearBottom = dom.messages.scrollHeight - dom.messages.scrollTop - dom.messages.clientHeight < 90;
+  const previousHeight = dom.messages.scrollHeight;
+  const previousTop = dom.messages.scrollTop;
+  const items = orderedMessages();
   const fragment = document.createDocumentFragment();
   if (!items.length) {
     const empty = document.createElement('div');
@@ -199,8 +212,22 @@ function renderMessages({preservePosition = false} = {}) {
     empty.textContent = '아직 대화가 없어요.\n첫 인사를 남겨보세요 ☺';
     fragment.append(empty);
   }
+  let previousDay = null;
   for (const item of items) {
     const data = item.data();
+    const day = messageDay(data.createdAt);
+    if (day !== previousDay) {
+      const divider = document.createElement('div');
+      divider.className = 'date-divider';
+      divider.dataset.day = day;
+      divider.setAttribute('role', 'separator');
+      divider.setAttribute('aria-label', dayLabel(day));
+      const label = document.createElement('span');
+      label.textContent = dayLabel(day);
+      divider.append(label);
+      fragment.append(divider);
+      previousDay = day;
+    }
     const existing = messageRows.get(item.id);
     if (existing) {
       existing.querySelector('time').textContent = displayTime(data.createdAt);
@@ -229,7 +256,7 @@ function renderMessages({preservePosition = false} = {}) {
         image.loading = 'lazy';
         image.src = `data:${data.fileMime};base64,${data.fileData}`;
         openImage.append(image);
-        openImage.addEventListener('click', () => imageViewer.open(data, openImage));
+        openImage.addEventListener('click', () => imageViewer.open(imageGallery(), item.id, openImage));
         bubble.append(openImage);
       }
       const download = document.createElement('button');
@@ -263,6 +290,22 @@ function renderMessages({preservePosition = false} = {}) {
     dom.messages.scrollTop = previousTop;
   }
 }
+
+// 탭을 밤새 열어 두어도 오늘/어제 표시를 갱신합니다.
+function refreshDateLabels() {
+  dom.messages.querySelectorAll('.date-divider').forEach((divider) => {
+    const label = dayLabel(divider.dataset.day);
+    divider.querySelector('span').textContent = label;
+    divider.setAttribute('aria-label', label);
+  });
+}
+function scheduleDateRefresh() {
+  const now = new Date();
+  const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  setTimeout(() => { refreshDateLabels(); scheduleDateRefresh(); }, nextDay - now + 100);
+}
+scheduleDateRefresh();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshDateLabels(); });
 function updateHistoryControls() {
   dom.olderButton.disabled = !historyReady || loadingOlder;
   dom.olderButton.hidden = historyExhausted;
@@ -303,6 +346,7 @@ function clearListener() {
   chatVersion++;
   messageHistory.clear();
   messageRows.clear();
+  unreadIndicator.reset();
   dom.messages.replaceChildren();
   oldestLoadedMessage = null;
   historyReady = historyExhausted = loadingOlder = false;
@@ -316,6 +360,10 @@ function subscribeToChat() {
   // 최초 로딩에 포함된 이전 메시지는 새 메시지 알림을 내지 않습니다.
   let initialServerSnapshotReceived = false;
   unsubscribeMessages = onSnapshot(recent, { includeMetadataChanges: true }, (snapshot) => {
+    const added = initialServerSnapshotReceived ? snapshot.docChanges()
+      .filter((change) => change.type === 'added' && !change.doc.metadata.hasPendingWrites)
+      .map((change) => change.doc)
+      .filter((doc) => doc.data().uid !== currentUser?.uid && !messageHistory.has(doc.id)) : [];
     snapshot.docs.forEach((doc) => messageHistory.set(doc.id, doc));
     if (!initialServerSnapshotReceived && !snapshot.metadata.fromCache) {
       oldestLoadedMessage = snapshot.docs[snapshot.docs.length - 1] || null;
@@ -325,13 +373,10 @@ function subscribeToChat() {
     status(`채팅방 연결됨 · 불러온 메시지 ${messageHistory.size}개`);
     renderMessages();
     updateHistoryControls();
-    if (initialServerSnapshotReceived) {
-      const added = snapshot.docChanges()
-        .filter((change) => change.type === 'added' && !change.doc.metadata.hasPendingWrites)
-        .map((change) => change.doc)
-        .filter((doc) => doc.data().uid !== currentUser?.uid);
+    if (added.length) {
+      unreadIndicator.receive(added.map((doc) => doc.id));
       // Firestore의 내림차순 조회 결과이므로 가장 최근 메시지 하나로 알립니다.
-      if (added.length > 0) signalIncomingMessage(added[0]);
+      signalIncomingMessage(added[0]);
     }
     if (!snapshot.metadata.fromCache) initialServerSnapshotReceived = true;
   }, (error) => {
@@ -341,6 +386,7 @@ function subscribeToChat() {
     loadingOlder = false;
     historyReady = false;
     if (error.code === 'permission-denied') {
+      unreadIndicator.reset();
       imageViewer.close();
       messageHistory.clear();
       messageRows.clear();

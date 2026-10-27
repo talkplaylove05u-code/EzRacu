@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f6f7fb" />
   <meta name="description" content="두 사람만 대화하는 작은 웹 채팅방" />
   <title>우리 둘 채팅방</title>
-  <link rel="stylesheet" href="./style.css?v=4" />
+  <link rel="stylesheet" href="./style.css?v=5" />
 </head>
 <body>
   <div class="app-shell">
@@ -18,7 +18,7 @@
     <main class="chat-panel">
       <header class="chat-header">
         <div class="chat-avatar" aria-hidden="true">💬</div>
-        <div class="header-copy"><strong>우리 둘 채팅방</strong><span id="connectionStatus">로그인 대기 중</span></div>
+        <div class="header-copy"><strong>우리 둘 채팅방 <span class="unread-badge" id="unreadBadge" aria-hidden="true" hidden></span></strong><span id="connectionStatus">로그인 대기 중</span></div>
         <div class="header-actions">
           <button class="action-button notify-off" id="notificationToggle" type="button" aria-pressed="false" title="새 메시지 알림을 켜거나 끕니다" hidden>🔕 알림 OFF</button>
           <button class="action-button popup-action" id="popupButton" type="button" title="작은 별도 창으로 열기">▣ 팝업</button>
@@ -42,8 +42,11 @@
           <button id="olderMessagesButton" type="button" disabled>이전 대화 100개 더 보기</button>
           <span id="historyStatus" role="status"></span>
         </div>
-        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions">
-          <div class="empty-state">아직 대화가 없어요.<br>첫 인사를 남겨보세요 ☺</div>
+        <div class="message-area">
+          <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions">
+            <div class="empty-state">아직 대화가 없어요.<br>첫 인사를 남겨보세요 ☺</div>
+          </div>
+          <button id="newMessagesButton" class="new-messages-button" type="button" aria-live="polite" hidden></button>
         </div>
         <form class="composer-area" id="messageForm">
           <div class="attachment-preview" id="attachmentPreview" hidden>
@@ -66,6 +69,6 @@
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script type="module" src="./app.js?v=4"></script>
+  <script type="module" src="./app.js?v=5"></script>
 </body>
 </html>

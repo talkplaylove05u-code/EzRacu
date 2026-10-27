@@ -83,6 +83,16 @@ html.popup-mode .composer-hint { text-align: center; padding: 5px 9px 8px; font-
 
 /* 사진 확대창과 읽기 쉬운 메시지 시간 */
 .message-time { color: #626a7d; font-size: 11px; font-weight: 500; }
+.message-area { position: relative; display: flex; flex: 1 1 0; min-height: 0; overflow: hidden; }
+.message-area .messages { width: 100%; }
+.header-copy strong { display: flex; align-items: center; gap: 6px; }
+.header-copy .unread-badge { flex: none; padding: 2px 6px; min-width: 20px; border-radius: 10px; background: #6559bf; color: #fff; font-size: 10px; line-height: 1.4; text-align: center; }
+.new-messages-button { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); border: 1px solid #c7c2ef; border-radius: 20px; background: #f2efff; color: #49418c; padding: 10px 18px; font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; box-shadow: 0 4px 15px #36306c26; cursor: pointer; }
+.new-messages-button:hover { background: #e6e0ff; }
+.new-messages-button:focus-visible { outline: 3px solid #8e83d7; outline-offset: 2px; }
+.date-divider { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; flex: none; padding: 5px 0; color: #626a7d; font-size: 11px; }
+.date-divider::before, .date-divider::after { content: ''; height: 1px; background: #e6e7f0; flex: 1; }
+.date-divider span { border-radius: 14px; padding: 5px 12px; background: #f1f2f8; white-space: nowrap; }
 .history-controls { flex: none; min-height: 31px; display: flex; justify-content: center; align-items: center; padding: 5px 10px; background: #fff; }
 .history-controls button { border: 1px solid #dfe1f0; border-radius: 14px; padding: 5px 14px; background: #f7f6ff; color: #504b9d; font: inherit; font-size: 11px; cursor: pointer; }
 .history-controls button:hover { background: #eeeaff; }
@@ -98,12 +108,18 @@ body.image-viewer-open { overflow: hidden; }
 .image-viewer-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e7e9f1; flex: none; }
 .image-viewer-heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .image-viewer-heading strong { font-size: 15px; }
+.image-viewer-position { margin-left: 8px; color: #626a7d; font-size: 12px; font-weight: 500; }
 .image-viewer-name { font-size: 12px; color: #626a7d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .image-viewer button { font: inherit; font-size: 13px; border: 1px solid #dfe2ed; border-radius: 9px; padding: 9px 12px; background: #fff; color: #363c56; cursor: pointer; }
 .image-viewer button:hover { background: #efedff; }
 .image-viewer button:focus-visible, .image-viewer-viewport:focus-visible { outline: 3px solid #9b96ec; outline-offset: -3px; }
 .image-viewer button:disabled { opacity: .4; cursor: not-allowed; }
 .image-viewer .image-viewer-close { width: 38px; height: 38px; padding: 0; }
+.image-viewer-stage { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.image-viewer .image-viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 48px; padding: 0; font-size: 32px; line-height: 1; background: #fffffff2; box-shadow: 0 2px 10px #20243b22; }
+.image-viewer .image-viewer-nav:disabled { opacity: .3; }
+.image-viewer-previous { left: 10px; }
+.image-viewer-next { right: 10px; }
 .image-viewer-viewport { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; background: #f0f1f6; }
 .image-viewer-canvas { display: grid; place-items: center; width: max-content; min-width: 100%; min-height: 100%; padding: 16px; }
 .image-viewer-photo { display: block; max-width: none; flex: none; object-fit: contain; }
@@ -117,4 +133,7 @@ body.image-viewer-open { overflow: hidden; }
   .image-viewer-toolbar { padding: 10px 8px max(10px, env(safe-area-inset-bottom)); gap: 6px; }
   .image-viewer button { padding: 9px; font-size: 12px; }
   .image-viewer-zoom { gap: 3px; }
+  .image-viewer .image-viewer-nav { width: 34px; height: 42px; font-size: 27px; }
+  .image-viewer-previous { left: 4px; }
+  .image-viewer-next { right: 4px; }
 }
