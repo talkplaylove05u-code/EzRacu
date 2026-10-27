@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7fb" />
+  <meta name="description" content="두 사람만 대화하는 작은 웹 채팅방" />
+  <title>우리 둘 채팅방</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="left-panel" aria-label="채팅방 소개">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">✦</span> 둘만의 공간</div>
+      <div class="hero"><div class="hero-emblem" aria-hidden="true">☁</div><h1>우리 둘,<br><span>여기서 얘기해.</span></h1><p>프로그램 설치 없이 브라우저로 만나는<br>작고 조용한 대화 공간.</p></div>
+      <div class="aside-footer"><span class="footer-dot" aria-hidden="true"></span> 비공개 대화는 지정된 두 계정만 볼 수 있어요</div>
+    </aside>
+    <main class="chat-panel">
+      <header class="chat-header">
+        <div class="chat-avatar" aria-hidden="true">💬</div>
+        <div class="header-copy"><strong>우리 둘 채팅방</strong><span id="connectionStatus">로그인 대기 중</span></div>
+        <button class="ghost-button" id="logoutButton" type="button" hidden>로그아웃</button>
+      </header>
+      <section class="login-view" id="loginView" aria-labelledby="loginHeading">
+        <div class="login-art" aria-hidden="true"><span>💭</span><span>💬</span></div>
+        <h2 id="loginHeading">반가워요 👋</h2>
+        <p>미리 지정된 두 사람의 Google 계정으로만<br>채팅 내용을 확인할 수 있어요.</p>
+        <button id="loginButton" class="primary-button login-button" type="button">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.27 5.48-4.8 7.18l7.73 6C44.38 38.03 46.98 31.91 46.98 24.55z"/><path fill="#FBBC05" d="M10.53 28.59A14.42 14.42 0 0 1 9.75 24c0-1.6.27-3.15.76-4.59l-7.98-6.2A24.01 24.01 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.92-2.13 15.9-5.8l-7.73-6c-2.15 1.44-4.92 2.3-8.17 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Google 계정으로 입장하기
+        </button>
+        <p class="small-note" id="setupNote">초기 설정 후 이용할 수 있습니다.</p>
+        <p class="error-message" id="loginError" role="alert" hidden></p>
+      </section>
+      <section class="conversation" id="conversation" aria-label="대화 내용" hidden>
+        <div class="chat-notice">🔒 지정된 두 계정만 메시지를 읽고 보낼 수 있습니다.<br><small>종단 간 암호화(E2EE)는 적용되지 않았습니다.</small></div>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions">
+          <div class="empty-state">아직 대화가 없어요.<br>첫 인사를 남겨보세요 ☺</div>
+        </div>
+        <form class="composer" id="messageForm">
+          <label class="sr-only" for="messageInput">메시지 입력</label>
+          <textarea id="messageInput" rows="1" maxlength="1000" placeholder="메시지 입력..." autocomplete="off" enterkeyhint="send" required></textarea>
+          <button class="send-button" id="sendButton" type="submit" aria-label="메시지 보내기" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 14-8-4 16-3.5-6.5L5 12Z"/><path d="M11.5 13.5 19 4"/></svg>
+          </button>
+        </form>
+        <div class="composer-hint">Enter 전송 · Shift + Enter 줄바꿈</div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
