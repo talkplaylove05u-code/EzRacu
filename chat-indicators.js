@@ -16,7 +16,7 @@ export function dayLabel(key, now = new Date()) {
 }
 
 export function createUnreadIndicator({messages, badge, button, canRead, focusInput}) {
-  const baseTitle = document.title;
+  let baseTitle = document.title;
   const unread = new Set();
   const atBottom = () => messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90;
   const reading = () => canRead() && !document.hidden && document.hasFocus() && atBottom();
@@ -49,6 +49,7 @@ export function createUnreadIndicator({messages, badge, button, canRead, focusIn
       update();
     },
     reset() { unread.clear(); update(); },
+    setTitle(title) { baseTitle = title; update(); },
     sync,
   };
 }

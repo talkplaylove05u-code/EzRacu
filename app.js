@@ -3,7 +3,8 @@ import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signO
 import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocsFromServer, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { createImageViewer } from './image-viewer.js?v=5';
-import { createUnreadIndicator, messageDay, dayLabel } from './chat-indicators.js?v=5';
+import { createUnreadIndicator, messageDay, dayLabel } from './chat-indicators.js?v=8';
+import { getRoomName, initializeRoomName } from './room-name.js?v=8';
 
 const $ = (id) => document.getElementById(id);
 const dom = {
@@ -15,7 +16,7 @@ const dom = {
   notificationToggle: $('notificationToggle'), popupButton: $('popupButton'),
   olderButton: $('olderMessagesButton'), historyStatus: $('historyStatus'),
   unreadBadge: $('unreadBadge'), newMessagesButton: $('newMessagesButton'),
-  themeDialog: $('themeDialog'),
+  themeDialog: $('themeDialog'), roomNameDialog: $('roomNameDialog'),
 };
 const isConfigured = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('PASTE_') &&
   firebaseConfig.projectId && firebaseConfig.projectId !== 'YOUR_PROJECT_ID' &&
@@ -32,9 +33,11 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif
 const imageViewer = createImageViewer(downloadAttachment, dom.input, () => unreadIndicator.sync());
 const unreadIndicator = createUnreadIndicator({
   messages: dom.messages, badge: dom.unreadBadge, button: dom.newMessagesButton,
-  canRead: () => Boolean(currentUser) && !imageViewer.isOpen && !dom.themeDialog.open, focusInput: dom.input,
+  canRead: () => Boolean(currentUser) && !imageViewer.isOpen && !dom.themeDialog.open && !dom.roomNameDialog.open, focusInput: dom.input,
 });
 dom.themeDialog.addEventListener('close', () => unreadIndicator.sync());
+dom.roomNameDialog.addEventListener('close', () => unreadIndicator.sync());
+initializeRoomName({onChange: (name) => unreadIndicator.setTitle(name), notify});
 const MESSAGE_PAGE_SIZE = 100;
 const messageHistory = new Map();
 const messageRows = new Map();
@@ -109,7 +112,7 @@ function signalIncomingMessage(doc) {
   if ('Notification' in window && Notification.permission === 'granted' &&
       (document.hidden || !document.hasFocus())) {
     try {
-      const alert = new Notification('우리 둘 채팅방 · 새 메시지', {
+      const alert = new Notification(`${getRoomName()} · 새 메시지`, {
         body: data.kind === 'attachment' ? `📎 ${data.fileName || '첨부 파일'}` : (data.text || '').slice(0, 100),
         tag: 'ezracu-new-message',
       });

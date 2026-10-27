@@ -8,7 +8,7 @@
   <title>우리 둘 채팅방</title>
   <script src="./themes.js?v=6"></script>
   <link rel="stylesheet" href="./style.css?v=6" />
-  <link rel="stylesheet" href="./themes.css?v=6" />
+  <link rel="stylesheet" href="./themes.css?v=8" />
 </head>
 <body>
   <div class="app-shell">
@@ -20,7 +20,7 @@
     <main class="chat-panel">
       <header class="chat-header">
         <div class="chat-avatar" aria-hidden="true">💬</div>
-        <div class="header-copy"><strong>우리 둘 채팅방 <span class="unread-badge" id="unreadBadge" aria-hidden="true" hidden></span></strong><span id="connectionStatus">로그인 대기 중</span></div>
+        <div class="header-copy"><strong><button id="roomNameButton" class="room-name-button" type="button" aria-label="우리 둘 채팅방, 이름 바꾸기" aria-haspopup="dialog" aria-controls="roomNameDialog" title="채팅방 이름 바꾸기"><span id="roomNameText">우리 둘 채팅방</span><span class="room-name-edit" aria-hidden="true">✎</span></button><span class="unread-badge" id="unreadBadge" aria-hidden="true" hidden></span></strong><span id="connectionStatus">로그인 대기 중</span></div>
         <div class="header-actions">
           <button class="action-button" id="themeButton" type="button" aria-haspopup="dialog" aria-controls="themeDialog" title="채팅 디자인 바꾸기">디자인</button>
           <button class="action-button notify-off" id="notificationToggle" type="button" aria-pressed="false" title="새 메시지 알림을 켜거나 끕니다" hidden>🔕 알림 OFF</button>
@@ -70,6 +70,13 @@
       </section>
     </main>
   </div>
+  <dialog class="theme-dialog room-name-dialog" id="roomNameDialog" aria-labelledby="roomNameHeading" aria-describedby="roomNameHelp">
+    <form id="roomNameForm">
+      <header class="theme-dialog-header"><div><h2 id="roomNameHeading">채팅방 이름 바꾸기</h2><p id="roomNameHelp">이 브라우저에서 사용할 이름을 정해요.</p></div><button id="roomNameClose" class="theme-close" type="button" aria-label="이름 변경창 닫기">✕</button></header>
+      <div class="room-name-fields"><label for="roomNameInput">채팅방 이름</label><input id="roomNameInput" type="text" maxlength="30" autocomplete="off" placeholder="새 이름을 입력하세요" /><p class="room-name-hint">최대 30자 · 이 브라우저에만 저장돼요.</p><p id="roomNameError" class="room-name-error" role="alert" hidden></p><button id="roomNameReset" class="room-name-reset" type="button">기본 이름으로</button></div>
+      <footer class="room-name-footer"><button id="roomNameCancel" class="ghost-button" type="button">취소</button><button class="primary-button" type="submit">저장</button></footer>
+    </form>
+  </dialog>
   <dialog class="theme-dialog" id="themeDialog" aria-labelledby="themeHeading" aria-describedby="themeHelp">
     <header class="theme-dialog-header"><div><h2 id="themeHeading">채팅 디자인</h2><p id="themeHelp">마음에 드는 디자인을 골라보세요.</p></div><button id="themeClose" class="theme-close" type="button" aria-label="디자인 선택창 닫기">✕</button></header>
     <div class="theme-options" role="radiogroup" aria-label="채팅 디자인 선택">
@@ -80,6 +87,6 @@
     <footer class="theme-dialog-footer"><p id="themeSaveNote" role="status">선택한 디자인은 이 브라우저에서 기억해요.</p><button id="themeDone" class="primary-button" type="button">완료</button></footer>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script type="module" src="./app.js?v=6"></script>
+  <script type="module" src="./app.js?v=8"></script>
 </body>
 </html>
