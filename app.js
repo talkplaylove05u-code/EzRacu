@@ -1,7 +1,8 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocsFromServer, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { createImageViewer } from './image-viewer.js';
 
 const $ = (id) => document.getElementById(id);
 const dom = {
@@ -11,6 +12,7 @@ const dom = {
   attachButton: $('attachButton'), fileInput: $('fileInput'), attachmentPreview: $('attachmentPreview'),
   attachmentThumbnail: $('attachmentThumbnail'), attachmentDescription: $('attachmentDescription'), attachmentRemove: $('attachmentRemove'),
   notificationToggle: $('notificationToggle'), popupButton: $('popupButton'),
+  olderButton: $('olderMessagesButton'), historyStatus: $('historyStatus'),
 };
 const isConfigured = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('PASTE_') &&
   firebaseConfig.projectId && firebaseConfig.projectId !== 'YOUR_PROJECT_ID' &&
@@ -24,6 +26,15 @@ let preparing = false;
 let pendingAttachment = null;
 const MAX_FILE_BYTES = 400 * 1024; // Firestore 무료 플랜용: 단일 문서에 인코딩해 저장
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const imageViewer = createImageViewer(downloadAttachment, dom.input);
+const MESSAGE_PAGE_SIZE = 100;
+const messageHistory = new Map();
+const messageRows = new Map();
+let oldestLoadedMessage = null;
+let historyReady = false;
+let historyExhausted = false;
+let loadingOlder = false;
+let chatVersion = 0;
 let toastTimeout;
 let audioContext = null;
 const notificationKey = 'ezracu-notifications-enabled-v2';
@@ -172,9 +183,15 @@ function formatFileSize(bytes) {
   if (!Number.isFinite(bytes)) return '';
   return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`;
 }
-function renderMessages(snapshot) {
+function renderMessages({preservePosition = false} = {}) {
   const nearBottom = dom.messages.scrollHeight - dom.messages.scrollTop - dom.messages.clientHeight < 90;
-  const items = [...snapshot.docs].reverse();
+  const previousHeight = dom.messages.scrollHeight;
+  const previousTop = dom.messages.scrollTop;
+  const items = [...messageHistory.values()].sort((a, b) => {
+    const timeA = a.data().createdAt?.toMillis() ?? Number.MAX_SAFE_INTEGER;
+    const timeB = b.data().createdAt?.toMillis() ?? Number.MAX_SAFE_INTEGER;
+    return timeA - timeB || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  });
   const fragment = document.createDocumentFragment();
   if (!items.length) {
     const empty = document.createElement('div');
@@ -184,8 +201,15 @@ function renderMessages(snapshot) {
   }
   for (const item of items) {
     const data = item.data();
+    const existing = messageRows.get(item.id);
+    if (existing) {
+      existing.querySelector('time').textContent = displayTime(data.createdAt);
+      fragment.append(existing);
+      continue;
+    }
     const mine = data.uid === currentUser?.uid;
     const row = document.createElement('div');
+    row.dataset.messageId = item.id;
     row.className = `message-line${mine ? ' mine' : ''}`;
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -194,12 +218,19 @@ function renderMessages(snapshot) {
     if (isAttachment) {
       bubble.classList.add('attachment-bubble');
       if (isImageAttachment(data)) {
+        const openImage = document.createElement('button');
+        openImage.type = 'button';
+        openImage.className = 'image-open';
+        openImage.setAttribute('aria-label', `사진 크게 보기: ${data.fileName}`);
+        openImage.title = '클릭하면 크게 볼 수 있어요';
         const image = document.createElement('img');
         image.className = 'chat-image';
         image.alt = `첨부 사진: ${data.fileName}`;
         image.loading = 'lazy';
         image.src = `data:${data.fileMime};base64,${data.fileData}`;
-        bubble.append(image);
+        openImage.append(image);
+        openImage.addEventListener('click', () => imageViewer.open(data, openImage));
+        bubble.append(openImage);
       }
       const download = document.createElement('button');
       download.type = 'button';
@@ -220,25 +251,80 @@ function renderMessages(snapshot) {
     time.className = 'message-time';
     time.textContent = displayTime(data.createdAt);
     row.append(bubble, time);
+    messageRows.set(item.id, row);
     fragment.append(row);
   }
   dom.messages.replaceChildren(fragment);
-  if (nearBottom || items.length < 6) dom.messages.scrollTop = dom.messages.scrollHeight;
+  if (preservePosition) {
+    dom.messages.scrollTop = previousTop + dom.messages.scrollHeight - previousHeight;
+  } else if (nearBottom || items.length < 6) {
+    dom.messages.scrollTop = dom.messages.scrollHeight;
+  } else {
+    dom.messages.scrollTop = previousTop;
+  }
+}
+function updateHistoryControls() {
+  dom.olderButton.disabled = !historyReady || loadingOlder;
+  dom.olderButton.hidden = historyExhausted;
+  dom.olderButton.textContent = loadingOlder ? '이전 대화 불러오는 중...' : '이전 대화 100개 더 보기';
+  dom.historyStatus.textContent = historyExhausted && messageHistory.size ? '처음 대화까지 모두 불러왔어요.' : '';
+}
+async function loadOlderMessages() {
+  if (!currentUser || !historyReady || historyExhausted || loadingOlder || !oldestLoadedMessage) return;
+  const version = chatVersion;
+  loadingOlder = true;
+  updateHistoryControls();
+  try {
+    const older = query(collection(db, 'rooms', 'private-room', 'messages'),
+      orderBy('createdAt', 'desc'), startAfter(oldestLoadedMessage), limit(MESSAGE_PAGE_SIZE));
+    const snapshot = await getDocsFromServer(older);
+    // 로그아웃하거나 계정이 바뀐 뒤 도착한 이전 요청은 화면에 반영하지 않습니다.
+    if (version !== chatVersion) return;
+    snapshot.docs.forEach((doc) => messageHistory.set(doc.id, doc));
+    if (snapshot.docs.length) oldestLoadedMessage = snapshot.docs[snapshot.docs.length - 1];
+    historyExhausted = snapshot.docs.length < MESSAGE_PAGE_SIZE;
+    renderMessages({preservePosition: true});
+    status(`채팅방 연결됨 · 불러온 메시지 ${messageHistory.size}개`);
+  } catch (error) {
+    if (version !== chatVersion) return;
+    console.error('Older messages failed:', error);
+    notify('이전 대화를 불러오지 못했어요. 연결 상태를 확인하고 다시 눌러 주세요.');
+  } finally {
+    if (version === chatVersion) {
+      loadingOlder = false;
+      updateHistoryControls();
+    }
+  }
 }
 function clearListener() {
   if (unsubscribeMessages) unsubscribeMessages();
   unsubscribeMessages = null;
+  imageViewer.close();
+  chatVersion++;
+  messageHistory.clear();
+  messageRows.clear();
+  dom.messages.replaceChildren();
+  oldestLoadedMessage = null;
+  historyReady = historyExhausted = loadingOlder = false;
+  updateHistoryControls();
 }
 function subscribeToChat() {
   clearListener();
   status('채팅방 연결 중...');
   const messagesRef = collection(db, 'rooms', 'private-room', 'messages');
-  const recent = query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
+  const recent = query(messagesRef, orderBy('createdAt', 'desc'), limit(MESSAGE_PAGE_SIZE));
   // 최초 로딩에 포함된 이전 메시지는 새 메시지 알림을 내지 않습니다.
   let initialServerSnapshotReceived = false;
   unsubscribeMessages = onSnapshot(recent, { includeMetadataChanges: true }, (snapshot) => {
-    status('채팅방 연결됨 · 최근 100개 메시지');
-    renderMessages(snapshot);
+    snapshot.docs.forEach((doc) => messageHistory.set(doc.id, doc));
+    if (!initialServerSnapshotReceived && !snapshot.metadata.fromCache) {
+      oldestLoadedMessage = snapshot.docs[snapshot.docs.length - 1] || null;
+      historyExhausted = snapshot.docs.length < MESSAGE_PAGE_SIZE;
+      historyReady = true;
+    }
+    status(`채팅방 연결됨 · 불러온 메시지 ${messageHistory.size}개`);
+    renderMessages();
+    updateHistoryControls();
     if (initialServerSnapshotReceived) {
       const added = snapshot.docChanges()
         .filter((change) => change.type === 'added' && !change.doc.metadata.hasPendingWrites)
@@ -251,12 +337,19 @@ function subscribeToChat() {
   }, (error) => {
     console.error('Message subscription failed:', error);
     status('접속 권한 또는 연결 확인 필요');
+    chatVersion++;
+    loadingOlder = false;
+    historyReady = false;
     if (error.code === 'permission-denied') {
+      imageViewer.close();
+      messageHistory.clear();
+      messageRows.clear();
       notify('접근할 수 없는 계정입니다. 두 계정의 이메일과 Firestore 보안 규칙을 확인하세요.');
       dom.messages.textContent = '채팅 권한이 없습니다. 관리자에게 계정 등록을 요청하세요.';
     } else {
       notify('대화를 불러오지 못했습니다. 네트워크와 Firestore 설정을 확인하세요.');
     }
+    updateHistoryControls();
   });
 }
 function updateSubmitState() {
@@ -423,6 +516,7 @@ dom.input.addEventListener('keydown', (event) => {
   }
 });
 dom.form.addEventListener('submit', sendMessage);
+dom.olderButton.addEventListener('click', loadOlderMessages);
 dom.attachButton.addEventListener('click', () => dom.fileInput.click());
 dom.fileInput.addEventListener('change', () => {
   if (dom.fileInput.files?.length) setAttachment(dom.fileInput.files[0]);

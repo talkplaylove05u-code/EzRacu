@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f6f7fb" />
   <meta name="description" content="두 사람만 대화하는 작은 웹 채팅방" />
   <title>우리 둘 채팅방</title>
-  <link rel="stylesheet" href="./style.css?v=3" />
+  <link rel="stylesheet" href="./style.css?v=4" />
 </head>
 <body>
   <div class="app-shell">
@@ -38,6 +38,10 @@
       </section>
       <section class="conversation" id="conversation" aria-label="대화 내용" hidden>
         <div class="chat-notice">🔒 지정된 두 계정만 메시지를 읽고 보낼 수 있습니다.<br><small>종단 간 암호화(E2EE)는 적용되지 않았습니다.</small></div>
+        <div class="history-controls">
+          <button id="olderMessagesButton" type="button" disabled>이전 대화 100개 더 보기</button>
+          <span id="historyStatus" role="status"></span>
+        </div>
         <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions">
           <div class="empty-state">아직 대화가 없어요.<br>첫 인사를 남겨보세요 ☺</div>
         </div>
@@ -57,11 +61,11 @@
           </button>
           </div>
         </form>
-        <div class="composer-hint">Enter 전송 · Shift + Enter 줄바꿈 · 📎 파일 선택 · Ctrl+V 이미지 붙여넣기 · 파일 최대 400KB</div>
+        <div class="composer-hint">Enter 전송 · Shift + Enter 줄바꿈 · 사진 클릭하면 크게 보기 · 파일 최대 400KB</div>
       </section>
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script type="module" src="./app.js?v=3"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>
