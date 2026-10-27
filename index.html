@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f6f7fb" />
   <meta name="description" content="두 사람만 대화하는 작은 웹 채팅방" />
   <title>우리 둘 채팅방</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=3" />
 </head>
 <body>
   <div class="app-shell">
@@ -19,7 +19,11 @@
       <header class="chat-header">
         <div class="chat-avatar" aria-hidden="true">💬</div>
         <div class="header-copy"><strong>우리 둘 채팅방</strong><span id="connectionStatus">로그인 대기 중</span></div>
-        <button class="ghost-button" id="logoutButton" type="button" hidden>로그아웃</button>
+        <div class="header-actions">
+          <button class="action-button notify-off" id="notificationToggle" type="button" aria-pressed="false" title="새 메시지 알림을 켜거나 끕니다" hidden>🔕 알림 OFF</button>
+          <button class="action-button popup-action" id="popupButton" type="button" title="작은 별도 창으로 열기">▣ 팝업</button>
+          <button class="ghost-button" id="logoutButton" type="button" hidden>로그아웃</button>
+        </div>
       </header>
       <section class="login-view" id="loginView" aria-labelledby="loginHeading">
         <div class="login-art" aria-hidden="true"><span>💭</span><span>💬</span></div>
@@ -37,18 +41,27 @@
         <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions">
           <div class="empty-state">아직 대화가 없어요.<br>첫 인사를 남겨보세요 ☺</div>
         </div>
-        <form class="composer" id="messageForm">
+        <form class="composer-area" id="messageForm">
+          <div class="attachment-preview" id="attachmentPreview" hidden>
+            <img id="attachmentThumbnail" alt="첨부 이미지 미리보기" hidden />
+            <span class="attachment-description" id="attachmentDescription"></span>
+            <button class="attachment-remove" id="attachmentRemove" type="button" aria-label="첨부 삭제">✕</button>
+          </div>
+          <div class="composer">
+          <button class="attach-button" id="attachButton" type="button" aria-label="사진 또는 파일 첨부" title="사진 또는 파일 첨부">📎</button>
+          <input id="fileInput" type="file" class="sr-only" tabindex="-1" aria-label="첨부할 파일 선택" />
           <label class="sr-only" for="messageInput">메시지 입력</label>
-          <textarea id="messageInput" rows="1" maxlength="1000" placeholder="메시지 입력..." autocomplete="off" enterkeyhint="send" required></textarea>
+          <textarea id="messageInput" rows="1" maxlength="1000" placeholder="메시지 입력 · 이미지는 Ctrl+V" autocomplete="off" enterkeyhint="send"></textarea>
           <button class="send-button" id="sendButton" type="submit" aria-label="메시지 보내기" disabled>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 14-8-4 16-3.5-6.5L5 12Z"/><path d="M11.5 13.5 19 4"/></svg>
           </button>
+          </div>
         </form>
-        <div class="composer-hint">Enter 전송 · Shift + Enter 줄바꿈</div>
+        <div class="composer-hint">Enter 전송 · Shift + Enter 줄바꿈 · 📎 파일 선택 · Ctrl+V 이미지 붙여넣기 · 파일 최대 400KB</div>
       </section>
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=3"></script>
 </body>
 </html>
